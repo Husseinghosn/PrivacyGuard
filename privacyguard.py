@@ -1,3 +1,4 @@
+from importlib.resources import path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,46 +6,56 @@ import seaborn as sns
 import math
 
 
+training_url = "./data/adult-training.csv"
+testing_url = "./data/adult-test.csv"
 
+# merge training and testing datasets for EDA
+
+training_df = pd.read_csv(training_url, header=None, skiprows=1 )
+testing_df = pd.read_csv(testing_url, header=None, skiprows=1)
+print(training_df.shape, testing_df.shape)
+df = pd.concat([training_df, testing_df], ignore_index=True)
 
 url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data'
 
 df = pd.read_csv(url, header=None)
-# print(df.head())
-plot_flag = True
-
+# Set plot_flag to True if you want to generate plots
+plot_flag = False
 def summarize_dataframe(df):
-    print('--------------------------------------------------------------------')
-    print('DataFrame Summary')
-    print('--------------------------------------------------------------------')
-    print(f'Total Rows: {df.shape[0]}')
-    print(f'Total Columns: {df.shape[1]}\n')
+    print("--------------------------------------------------------------------")
+    print("DataFrame Summary")
+    print("--------------------------------------------------------------------")
+    print(f"Total Rows: {df.shape[0]}")
+    print(f"Total Columns: {df.shape[1]}\n")
 
-    print('Column Data Types:')
+    print("The column names in the DataFrame are:\n", df.columns.tolist())
+    print("\n")
+    
+    print("Column Data Types:")
     print(df.dtypes)
-    print('\n')
+    print("\n")
 
-    print('Missing Values per Column:')
+    print("Missing Values per Column:")
     print(df.isnull().sum())
-    print('\n')
+    print("\n")
 
-    print('Statistical Summary of Numerical Columns:')
+    print("Statistical Summary of Numerical Columns:")
     print(df.describe().T)
-    print('\n')
+    print("\n")
 
-    print('Statistical Summary of Categorical Columns:')
-    print(df.describe(include=['object']).T)
-    print('\n')
+    print("Statistical Summary of Categorical Columns:")
+    print(df.describe(include=["object"]).T)
+    print("\n")
 
-    print('Unique Values per Column:')
+    print("Unique Values per Column:")
     for col in df.columns:
         unique_values = df[col].nunique()
-        print(f'Column {col}: {unique_values} unique values')
-    print('--------------------------------------------------------------------')
+        print(f"Column {col}: {unique_values} unique values")
+    print("--------------------------------------------------------------------")
 
-    print('\n')
+    print("\n")
 
-    print('The number of duplicate rows in the DataFrame:\n', df.duplicated().sum())
+    print("The number of duplicate rows in the DataFrame:\n", df.duplicated().sum())
 
 summarize_dataframe(df)
 
@@ -141,9 +152,27 @@ if plot_flag:
     plot_dataframe(df)
 
     
+numerical_cols = df.select_dtypes(include=[np.number]).columns
+categorical_cols = df.select_dtypes(exclude=[np.number]).columns
 
 
+outlier_info = []
+for col in numerical_cols:
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    lb = Q1 - 1.5 * IQR
+    ub = Q3 + 1.5 * IQR
+    mask = (df[col] < lb) | (df[col] > ub)
+    cnt = int(mask.sum())
+    pct = cnt / len(df) * 100
+    outlier_info.append((col, cnt, pct, lb, ub, mask))
 
+outlier_df = pd.DataFrame([{"col": c, "count": cnt, "pct": pct} for c, cnt, pct, *_ in outlier_info]).sort_values("count", ascending=False)
 
-
-
+plt.figure(figsize=(8, max(4, 0.5 * len(outlier_df))))
+sns.barplot(x="count", y="col", data=outlier_df, palette="viridis")
+plt.title("Outlier Counts per Numerical Column")
+plt.xlabel("Outlier count")
+plt.ylabel("Column")
+plt.show()
