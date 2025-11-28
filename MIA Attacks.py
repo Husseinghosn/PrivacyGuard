@@ -1,3 +1,10 @@
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_recall_curve
+from sklearn.model_selection import train_test_split
+from typing import Dict, Tuple, Optional
+import torch
+
 class BaseAttack:
     """Base class for membership inference attacks"""
     
